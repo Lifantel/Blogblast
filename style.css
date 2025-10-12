@@ -47,8 +47,14 @@ h1 {
 }
 
 @keyframes drop {
-  0% { transform: translateY(-50px) scale(0.6); opacity: 0.5; }
-  100% { transform: translateY(0) scale(1); opacity:1; }
+  0% { transform: translateY(-50px) scale(0.6); opacity: 0; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+@keyframes clearLine {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.6; background: #fbbf24; }
+  100% { transform: scale(0); opacity: 0; }
 }
 
 #pieces {
@@ -103,3 +109,4 @@ button:hover {
   .cell { width:32px; height:32px; }
   .piece div { width:20px; height:20px; }
 }
+
