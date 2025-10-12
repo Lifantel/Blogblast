@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Over</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="header">
+  <h1>💀 Oyun Bitti! 💀</h1>
+  <p>Son Skor: <span id="finalScore">0</span></p>
+  <p>En Yüksek Skor: <span id="highscore">0</span></p>
+  <button id="restart">Restart</button>
+</div>
+
+<script>
+const finalScore = localStorage.getItem('lastScore') || 0;
+const highscore = localStorage.getItem('highscore') || 0;
+document.getElementById('finalScore').textContent = finalScore;
+document.getElementById('highscore').textContent = highscore;
+
+document.getElementById('restart').addEventListener('click', () => {
+    window.location = 'index.html';
+});
+</script>
+</body>
+</html>
