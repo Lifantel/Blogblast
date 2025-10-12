@@ -23,7 +23,10 @@ let board = [],
   score = 0,
   timer = 120,
   interval,
-  dragged = null;
+  dragged = null,
+  draggedEl = null, // YENİ: Sürüklenen görsel element
+  offsetX = 0, // YENİ: Fare/parmak ile elementin solu arasındaki fark
+  offsetY = 0; // YENİ: Fare/parmak ile elementin üstü arasındaki fark
 
 function rotate(matrix) {
   const n = matrix.length,
@@ -78,108 +81,157 @@ function drawBoard() {
   }
 }
 
+// DEĞİŞTİ: drawPieces fonksiyonu tamamen yenilendi
 function drawPieces() {
   piecesEl.innerHTML = '';
   pieces.forEach((p, i) => {
-    const div = document.createElement("div");
-    div.className = "piece";
-    div.style.gridTemplateColumns = `repeat(${p.shape[0].length}, 30px)`;
+    const pieceDiv = document.createElement("div");
+    pieceDiv.className = "piece";
+    pieceDiv.style.gridTemplateColumns = `repeat(${p.shape[0].length}, 30px)`;
     p.shape.forEach(row => row.forEach(cell => {
       const c = document.createElement("div");
       if (cell) c.style.background = p.color;
-      div.appendChild(c);
+      pieceDiv.appendChild(c);
     }));
-    div.addEventListener("pointerdown", () => dragged = i);
-    div.addEventListener("pointerup", e => {
-      if (dragged !== i) return;
-      const rect = boardEl.getBoundingClientRect();
-      const cellWidth = rect.width / BOARD_SIZE;
-      const cellHeight = rect.height / BOARD_SIZE;
-      const x = Math.floor((e.clientX - rect.left) / cellWidth);
-      const y = Math.floor((e.clientY - rect.top) / cellHeight);
-      placePiece(x, y);
-      dragged = null;
+
+    pieceDiv.addEventListener("pointerdown", e => {
+      e.preventDefault(); // Sayfanın sürüklenmesini engelle
+      dragged = i;
+
+      // Sürüklenen elementin bir kopyasını oluştur
+      draggedEl = pieceDiv.cloneNode(true);
+      draggedEl.classList.add("dragging");
+      document.body.appendChild(draggedEl);
+
+      // Orijinal parçayı biraz soluklaştır
+      pieceDiv.style.opacity = '0.5';
+
+      // Parmağın parçanın neresine bastığını hesapla
+      const rect = pieceDiv.getBoundingClientRect();
+      offsetX = e.clientX - rect.left;
+      offsetY = e.clientY - rect.top;
+
+      // Hayalet parçayı anında doğru konuma taşı
+      draggedEl.style.left = `${e.clientX - offsetX}px`;
+      draggedEl.style.top = `${e.clientY - offsetY}px`;
     });
-    piecesEl.appendChild(div);
+    piecesEl.appendChild(pieceDiv);
   });
 }
 
+// YENİ: Parmağın hareketini takip eden olay dinleyicisi
+window.addEventListener("pointermove", e => {
+  if (dragged !== null && draggedEl) {
+    e.preventDefault();
+    // Hayalet parçayı parmağın pozisyonuna göre güncelle
+    draggedEl.style.left = `${e.clientX - offsetX}px`;
+    draggedEl.style.top = `${e.clientY - offsetY}px`;
+  }
+});
+
+// YENİ: Parmağı kaldırdığımızda ne olacağını belirleyen olay dinleyicisi
+window.addEventListener("pointerup", e => {
+  if (dragged !== null && draggedEl) {
+    // Tahtanın pozisyonunu al
+    const rect = boardEl.getBoundingClientRect();
+
+    // Tahtanın üzerinde miyiz diye kontrol et
+    if (e.clientX > rect.left && e.clientX < rect.right && e.clientY > rect.top && e.clientY < rect.bottom) {
+        const cellWidth = rect.width / BOARD_SIZE;
+        const cellHeight = rect.height / BOARD_SIZE;
+        // Bırakılan koordinatları hesapla
+        const x = Math.floor((e.clientX - rect.left) / cellWidth);
+        const y = Math.floor((e.clientY - rect.top) / cellHeight);
+        placePiece(x, y);
+    }
+    
+    // Temizlik yap
+    document.body.removeChild(draggedEl);
+    dragged = null;
+    draggedEl = null;
+    drawPieces(); // Orijinal parçanın görünümünü yenilemek için
+  }
+});
+
+
 function placePiece(x0, y0) {
-  if (dragged === null) return;
-  const { shape, color } = pieces[dragged];
-
-  // 1. Önce parçanın yerleştirilip yerleştirilemeyeceğini kontrol et
-  for (let dy = 0; dy < shape.length; dy++) {
-    for (let dx = 0; dx < shape[dy].length; dx++) {
-      if (shape[dy][dx]) {
-        const x = x0 + dx;
-        const y = y0 + dy;
-        if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || board[y][x]) {
-          return; // Geçersiz hamle
+    // DEĞİŞTİ: Bu fonksiyon artık sürüklenen parçanın indeksini global 'dragged' değişkeninden alıyor.
+    if (dragged === null) return;
+    const { shape, color } = pieces[dragged];
+    
+    // Parçanın sol üst köşesini değil, parmağın bastığı noktayı referans alarak yerleştirme
+    // Bu, daha sezgisel bir yerleştirme sağlar. Basitlik için orijinal mantığı koruyoruz:
+    // const adjustedX = x0 - Math.floor(offsetX / (draggedEl.clientWidth / shape[0].length));
+    // const adjustedY = y0 - Math.floor(offsetY / (draggedEl.clientHeight / shape.length));
+    
+    // Geçerlilik kontrolü
+    for (let dy = 0; dy < shape.length; dy++) {
+        for (let dx = 0; dx < shape[dy].length; dx++) {
+            if (shape[dy][dx]) {
+                const x = x0 + dx;
+                const y = y0 + dy;
+                if (x < 0 || x >= BOARD_SIZE || y < 0 || y >= BOARD_SIZE || board[y][x]) {
+                    return; 
+                }
+            }
         }
-      }
     }
-  }
 
-  // 2. Kontrollerden geçtiyse, parçayı yerleştir
-  let blockCount = 0;
-  for (let dy = 0; dy < shape.length; dy++) {
-    for (let dx = 0; dx < shape[dy].length; dx++) {
-      if (shape[dy][dx]) {
-        board[y0 + dy][x0 + dx] = color;
-        blockCount++;
-      }
+    // Parçayı yerleştir
+    let blockCount = 0;
+    for (let dy = 0; dy < shape.length; dy++) {
+        for (let dx = 0; dx < shape[dy].length; dx++) {
+            if (shape[dy][dx]) {
+                board[y0 + dy][x0 + dx] = color;
+                blockCount++;
+            }
+        }
     }
-  }
 
-  score += blockCount; // Yerleştirilen blok sayısı kadar skor ekle
-  timer += 2;
-  clearLines();
+    score += blockCount;
+    timer += 2;
+    clearLines();
 
-  pieces[dragged] = {
-    shape: randomPiece(),
-    color: COLORS[Math.floor(Math.random() * COLORS.length)]
-  };
-
-  drawBoard();
-  drawPieces();
+    pieces[dragged] = {
+        shape: randomPiece(),
+        color: COLORS[Math.floor(Math.random() * COLORS.length)]
+    };
+    
+    // DEĞİŞTİ: Yerleştirme sonrası sadece tahtayı çiziyoruz, parçalar 'pointerup' sonrası zaten çiziliyor.
+    drawBoard();
 }
 
 function clearLines() {
   let cleared = 0;
-  // Satırları kontrol et
-  for (let y = 0; y < BOARD_SIZE; y++) {
-    if (board[y].every(c => c)) {
-      for (let x = 0; x < BOARD_SIZE; x++) {
-        const cell = boardEl.children[y * BOARD_SIZE + x];
-        cell.style.animation = "clearLine 0.3s ease forwards";
-      }
-      setTimeout(() => {
-        board[y] = Array(BOARD_SIZE).fill(0);
-        drawBoard(); // Tahtayı yeniden çiz
-      }, 300);
-      cleared++;
-    }
-  }
+  let rowsToClear = [];
+  let colsToClear = [];
 
-  // Sütunları kontrol et
-  for (let x = 0; x < BOARD_SIZE; x++) {
-    if (board.every(r => r[x])) {
-      for (let y = 0; y < BOARD_SIZE; y++) {
-        const cell = boardEl.children[y * BOARD_SIZE + x];
-        cell.style.animation = "clearLine 0.3s ease forwards";
-      }
-      setTimeout(() => {
-        for (let y = 0; y < BOARD_SIZE; y++) board[y][x] = 0;
-        drawBoard(); // Tahtayı yeniden çiz
-      }, 300);
-      cleared++;
-    }
-  }
+  for(let y=0; y<BOARD_SIZE; y++) if(board[y].every(c => c)) rowsToClear.push(y);
+  for(let x=0; x<BOARD_SIZE; x++) if(board.every(r => r[x])) colsToClear.push(x);
+  
+  cleared = rowsToClear.length + colsToClear.length;
 
   if (cleared > 0) {
-    score += cleared * 10;
-    scoreEl.textContent = score;
+    rowsToClear.forEach(y => {
+        for (let x = 0; x < BOARD_SIZE; x++) {
+            boardEl.children[y * BOARD_SIZE + x].style.animation = "clearLine 0.3s ease forwards";
+        }
+    });
+    colsToClear.forEach(x => {
+        for (let y = 0; y < BOARD_SIZE; y++) {
+            boardEl.children[y * BOARD_SIZE + x].style.animation = "clearLine 0.3s ease forwards";
+        }
+    });
+
+    setTimeout(() => {
+        rowsToClear.forEach(y => board[y] = Array(BOARD_SIZE).fill(0));
+        colsToClear.forEach(x => {
+            for (let y = 0; y < BOARD_SIZE; y++) board[y][x] = 0;
+        });
+        score += cleared * 10;
+        scoreEl.textContent = score;
+        drawBoard();
+    }, 300);
   }
 }
 
@@ -188,7 +240,7 @@ function startTimer() {
   interval = setInterval(() => {
     timer--;
     if (timer <= 0) {
-      timer = 0; // Zamanlayıcının negatif olmasını engelle
+      timer = 0;
       gameOver();
     }
     const m = String(Math.floor(timer / 60)).padStart(2, '0');
@@ -203,11 +255,9 @@ function gameOver() {
   if (score > currentHighscore) {
     localStorage.setItem("highscore", score);
   }
-  // İsteğe bağlı: Oyun bittiğinde bir mesaj göstermek daha iyi olabilir.
-  // window.location.href="gameover.html";
   alert(`Oyun Bitti! Skorunuz: ${score}`);
+  // window.location.href="gameover.html";
 }
 
 restartBtn.addEventListener("click", initBoard);
 window.onload = initBoard;
-
