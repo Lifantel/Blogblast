@@ -13,35 +13,32 @@ let score = 0;
 let timer = 120;
 let interval;
 
-// Çeşitli bloklar: 1×1, 1×2, 2×1, 2×2, 1×3, L, ters L, 3×1, 1×4
+// Çeşitli bloklar
 const PIECE_SHAPES = [
-  [[0,0]],
-  [[0,0],[1,0]],
-  [[0,0],[0,1]],
-  [[0,0],[1,0],[0,1],[1,1]], 
-  [[0,0],[1,0],[2,0]], 
-  [[0,0],[0,1],[1,1]], 
-  [[0,0],[1,0],[2,0],[3,0]],
-  [[0,0],[0,1],[0,2]],
-  [[0,0],[1,0],[1,1]]
+  [[0,0]], [[0,0],[1,0]], [[0,0],[0,1]],
+  [[0,0],[1,0],[0,1],[1,1]], [[0,0],[1,0],[2,0]],
+  [[0,0],[0,1],[1,1]], [[0,0],[1,0],[2,0],[3,0]],
+  [[0,0],[0,1],[0,2]], [[0,0],[1,0],[1,1]]
 ];
 
-// Renkler
-const COLORS = ['#f87171','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6','#facc15','#f87171','#22d3ee'];
+const COLORS = ['#f87171','#fbbf24','#34d399','#60a5fa','#a78bfa','#f472b6','#facc15','#22d3ee'];
 
-// Başlangıç
+// Board başlat
 function initBoard(){
   board = Array(BOARD_SIZE).fill(null).map(()=>Array(BOARD_SIZE).fill(0));
 }
 
+// Rastgele parçalar
 function randomPieces(){
   pieces = [];
   for(let i=0;i<3;i++){
     const shape = PIECE_SHAPES[Math.floor(Math.random()*PIECE_SHAPES.length)];
-    pieces.push({shape: shape, color: COLORS[Math.floor(Math.random()*COLORS.length)]});
+    const color = COLORS[Math.floor(Math.random()*COLORS.length)];
+    pieces.push({shape,color});
   }
 }
 
+// Board çiz
 function drawBoard(){
   boardEl.innerHTML = '';
   for(let y=0;y<BOARD_SIZE;y++){
@@ -59,13 +56,42 @@ function drawBoard(){
   }
 }
 
+// Parçaları çiz (masaüstü ve mobil)
 function drawPieces(){
   piecesEl.innerHTML = '';
   pieces.forEach((p,i)=>{
     const div = document.createElement('div');
     div.className='piece';
+
+    // Masaüstü
     div.setAttribute('draggable', true);
     div.addEventListener('dragstart', ()=>{ draggedPieceIndex = i; });
+
+    // Mobil
+    div.addEventListener('touchstart', e=>{
+      draggedPieceIndex = i;
+      div.style.position = 'absolute';
+      div.style.zIndex = 1000;
+    });
+    div.addEventListener('touchmove', e=>{
+      const touch = e.touches[0];
+      div.style.left = touch.clientX - 20 + 'px';
+      div.style.top = touch.clientY - 20 + 'px';
+      e.preventDefault();
+    });
+    div.addEventListener('touchend', e=>{
+      const touch = e.changedTouches[0];
+      const boardRect = boardEl.getBoundingClientRect();
+      const x = Math.floor((touch.clientX - boardRect.left)/(boardRect.width/BOARD_SIZE));
+      const y = Math.floor((touch.clientY - boardRect.top)/(boardRect.height/BOARD_SIZE));
+      placeDraggedPiece(x,y);
+      div.style.position = '';
+      div.style.left = '';
+      div.style.top = '';
+      div.style.zIndex = '';
+      draggedPieceIndex = null;
+    });
+
     for(let y=0;y<4;y++){
       for(let x=0;x<4;x++){
         const cell = document.createElement('div');
@@ -77,7 +103,7 @@ function drawPieces(){
   });
 }
 
-// Blok yerleştirme
+// Blok yerleştir
 function placeDraggedPiece(x0,y0){
   if(draggedPieceIndex===null) return;
   const pieceObj = pieces[draggedPieceIndex];
@@ -91,43 +117,36 @@ function placeDraggedPiece(x0,y0){
     if(board[y][x]) return;
   }
 
-  // Yerleştir
   for(const [dx,dy] of piece){
     const x = x0+dx;
     const y = y0+dy;
     board[y][x] = {color};
   }
 
-  // Satır/sütun temizle
   const cleared = animateClearLines();
-  timer += cleared*2; 
+  timer += cleared*2;
   if(timer>999) timer=999;
 
   // Yeni parça
   const newShape = PIECE_SHAPES[Math.floor(Math.random()*PIECE_SHAPES.length)];
   const newColor = COLORS[Math.floor(Math.random()*COLORS.length)];
-  pieces[draggedPieceIndex] = {shape: newShape, color: newColor};
+  pieces[draggedPieceIndex] = {shape:newShape, color:newColor};
   draggedPieceIndex = null;
 
   drawBoard();
   drawPieces();
 
-  if(isGameOver() || timer<=0){
-    endGame();
-  }
+  if(isGameOver() || timer<=0) endGame();
 }
 
+// Satır/sütun temizle
 function animateClearLines(){
   let clearedCells = [];
   for(let y=0;y<BOARD_SIZE;y++){
-    if(board[y].every(c=>c)){
-      for(let x=0;x<BOARD_SIZE;x++) clearedCells.push([x,y]);
-    }
+    if(board[y].every(c=>c)) for(let x=0;x<BOARD_SIZE;x++) clearedCells.push([x,y]);
   }
   for(let x=0;x<BOARD_SIZE;x++){
-    if(board.every(row=>row[x])){
-      for(let y=0;y<BOARD_SIZE;y++) clearedCells.push([x,y]);
-    }
+    if(board.every(row=>row[x])) for(let y=0;y<BOARD_SIZE;y++) clearedCells.push([x,y]);
   }
 
   clearedCells.forEach(([x,y],i)=>{
@@ -142,14 +161,14 @@ function animateClearLines(){
   return Math.ceil(clearedCells.length/BOARD_SIZE);
 }
 
+// Oyun bitiş kontrol
 function isGameOver(){
-  return pieces.every(pieceObj=>{
-    const piece = pieceObj.shape;
+  return pieces.every(p=>{
+    const piece = p.shape;
     for(let y=0;y<BOARD_SIZE;y++){
       for(let x=0;x<BOARD_SIZE;x++){
         const canPlace = piece.every(([dx,dy])=>{
-          const nx=x+dx;
-          const ny=y+dy;
+          const nx=x+dx; const ny=y+dy;
           return nx>=0 && nx<BOARD_SIZE && ny>=0 && ny<BOARD_SIZE && !board[ny][nx];
         });
         if(canPlace) return false;
@@ -189,10 +208,10 @@ function endGame(){
 function restart(){
   initBoard();
   randomPieces();
-  draggedPieceIndex = null;
-  score = 0;
-  scoreEl.textContent = score;
-  timer = 120;
+  draggedPieceIndex=null;
+  score=0;
+  scoreEl.textContent=score;
+  timer=120;
   updateTimerDisplay();
   drawBoard();
   drawPieces();
@@ -206,4 +225,3 @@ window.onload = ()=>{
   restart();
 };
 restartBtn.addEventListener('click', restart);
-
