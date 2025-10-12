@@ -109,4 +109,12 @@ button:hover {
   .cell { width:32px; height:32px; }
   .piece div { width:20px; height:20px; }
 }
+/* Sürüklenen "hayalet" parçanın stili */
+.dragging {
+  position: absolute;
+  pointer-events: none; /* Bu sayede altındaki elemanlar "pointerup" olayını alabilir */
+  opacity: 0.8;
+  transform: scale(1.1);
+  z-index: 1000;
+}
 
