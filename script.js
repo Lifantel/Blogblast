@@ -255,8 +255,7 @@ function gameOver() {
   if (score > currentHighscore) {
     localStorage.setItem("highscore", score);
   }
-  alert(`Oyun Bitti! Skorunuz: ${score}`);
-  // window.location.href="gameover.html";
+  window.location.href="gameover.html";
 }
 
 restartBtn.addEventListener("click", initBoard);
