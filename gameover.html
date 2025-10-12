@@ -2,27 +2,39 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Game Over</title>
-<link rel="stylesheet" href="style.css">
+<style>
+body{
+  font-family:sans-serif;
+  background:#0f172a;
+  color:#f8fafc;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+button{
+  margin-top:20px;
+  padding:10px 20px;
+  border:none;
+  border-radius:8px;
+  background:#38bdf8;
+  font-weight:bold;
+}
+</style>
 </head>
 <body>
-<div class="header">
-  <h1>💀 Oyun Bitti! 💀</h1>
-  <p>Son Skor: <span id="finalScore">0</span></p>
-  <p>En Yüksek Skor: <span id="highscore">0</span></p>
-  <button id="restart">Restart</button>
-</div>
-
-<script>
-const finalScore = localStorage.getItem('lastScore') || 0;
-const highscore = localStorage.getItem('highscore') || 0;
-document.getElementById('finalScore').textContent = finalScore;
-document.getElementById('highscore').textContent = highscore;
-
-document.getElementById('restart').addEventListener('click', () => {
-    window.location = 'index.html';
-});
-</script>
+  <h1>Oyun Bitti 😢</h1>
+  <p>Puanınız: <span id="last"></span></p>
+  <p>En Yüksek: <span id="best"></span></p>
+  <button onclick="location.href='index.html'">↻ Yeniden Başla</button>
+  <script>
+    const last = localStorage.getItem('lastScore') || 0;
+    const best = localStorage.getItem('highscore') || 0;
+    document.getElementById('last').textContent = last;
+    document.getElementById('best').textContent = best;
+  </script>
 </body>
 </html>
