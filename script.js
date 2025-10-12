@@ -13,7 +13,6 @@ let score = 0;
 let timer = 120;
 let interval;
 
-// Çeşitli bloklar
 const PIECE_SHAPES = [
   [[0,0]], [[0,0],[1,0]], [[0,0],[0,1]],
   [[0,0],[1,0],[0,1],[1,1]], [[0,0],[1,0],[2,0]],
@@ -56,7 +55,7 @@ function drawBoard(){
   }
 }
 
-// Parçaları çiz (masaüstü ve mobil)
+// Parçaları çiz (masaüstü + mobil)
 function drawPieces(){
   piecesEl.innerHTML = '';
   pieces.forEach((p,i)=>{
@@ -65,18 +64,23 @@ function drawPieces(){
 
     // Masaüstü
     div.setAttribute('draggable', true);
-    div.addEventListener('dragstart', ()=>{ draggedPieceIndex = i; });
+    div.addEventListener('dragstart', ()=>{ 
+      draggedPieceIndex=i; 
+      div.style.opacity=0.6; 
+    });
+    div.addEventListener('dragend', ()=>{ div.style.opacity=1; });
 
     // Mobil
     div.addEventListener('touchstart', e=>{
-      draggedPieceIndex = i;
-      div.style.position = 'absolute';
-      div.style.zIndex = 1000;
+      draggedPieceIndex=i;
+      div.style.position='absolute';
+      div.style.zIndex=1000;
+      div.style.opacity=0.6;
     });
     div.addEventListener('touchmove', e=>{
-      const touch = e.touches[0];
-      div.style.left = touch.clientX - 20 + 'px';
-      div.style.top = touch.clientY - 20 + 'px';
+      const touch=e.touches[0];
+      div.style.left = touch.clientX-20+'px';
+      div.style.top = touch.clientY-20+'px';
       e.preventDefault();
     });
     div.addEventListener('touchend', e=>{
@@ -85,17 +89,15 @@ function drawPieces(){
       const x = Math.floor((touch.clientX - boardRect.left)/(boardRect.width/BOARD_SIZE));
       const y = Math.floor((touch.clientY - boardRect.top)/(boardRect.height/BOARD_SIZE));
       placeDraggedPiece(x,y);
-      div.style.position = '';
-      div.style.left = '';
-      div.style.top = '';
-      div.style.zIndex = '';
-      draggedPieceIndex = null;
+      div.style.position=''; div.style.left=''; div.style.top=''; div.style.zIndex='';
+      div.style.opacity=1;
+      draggedPieceIndex=null;
     });
 
     for(let y=0;y<4;y++){
       for(let x=0;x<4;x++){
         const cell = document.createElement('div');
-        if(p.shape.some(c=>c[0]===x && c[1]===y)) cell.style.background = p.color;
+        if(p.shape.some(c=>c[0]===x && c[1]===y)) cell.style.background=p.color;
         div.appendChild(cell);
       }
     }
@@ -120,40 +122,34 @@ function placeDraggedPiece(x0,y0){
   for(const [dx,dy] of piece){
     const x = x0+dx;
     const y = y0+dy;
-    board[y][x] = {color};
+    board[y][x]={color};
+    const cellEl = boardEl.children[y*BOARD_SIZE + x];
+    cellEl.style.transform = 'scale(0.5)';
+    setTimeout(()=>{ cellEl.style.transform='scale(1)'; }, 10);
   }
 
   const cleared = animateClearLines();
   timer += cleared*2;
   if(timer>999) timer=999;
 
-  // Yeni parça
   const newShape = PIECE_SHAPES[Math.floor(Math.random()*PIECE_SHAPES.length)];
   const newColor = COLORS[Math.floor(Math.random()*COLORS.length)];
-  pieces[draggedPieceIndex] = {shape:newShape, color:newColor};
-  draggedPieceIndex = null;
+  pieces[draggedPieceIndex]={shape:newShape,color:newColor};
+  draggedPieceIndex=null;
 
-  drawBoard();
-  drawPieces();
+  drawBoard(); drawPieces();
 
   if(isGameOver() || timer<=0) endGame();
 }
 
 // Satır/sütun temizle
 function animateClearLines(){
-  let clearedCells = [];
-  for(let y=0;y<BOARD_SIZE;y++){
-    if(board[y].every(c=>c)) for(let x=0;x<BOARD_SIZE;x++) clearedCells.push([x,y]);
-  }
-  for(let x=0;x<BOARD_SIZE;x++){
-    if(board.every(row=>row[x])) for(let y=0;y<BOARD_SIZE;y++) clearedCells.push([x,y]);
-  }
+  let clearedCells=[];
+  for(let y=0;y<BOARD_SIZE;y++) if(board[y].every(c=>c)) for(let x=0;x<BOARD_SIZE;x++) clearedCells.push([x,y]);
+  for(let x=0;x<BOARD_SIZE;x++) if(board.every(row=>row[x])) for(let y=0;y<BOARD_SIZE;y++) clearedCells.push([x,y]);
 
   clearedCells.forEach(([x,y],i)=>{
-    setTimeout(()=>{
-      board[y][x] = 0;
-      drawBoard();
-    }, i*30);
+    setTimeout(()=>{ board[y][x]=0; drawBoard(); }, i*30);
   });
 
   score += clearedCells.length;
@@ -164,7 +160,7 @@ function animateClearLines(){
 // Oyun bitiş kontrol
 function isGameOver(){
   return pieces.every(p=>{
-    const piece = p.shape;
+    const piece=p.shape;
     for(let y=0;y<BOARD_SIZE;y++){
       for(let x=0;x<BOARD_SIZE;x++){
         const canPlace = piece.every(([dx,dy])=>{
@@ -182,8 +178,7 @@ function isGameOver(){
 function startTimer(){
   clearInterval(interval);
   interval = setInterval(()=>{
-    timer--;
-    if(timer<0) timer=0;
+    timer--; if(timer<0) timer=0;
     updateTimerDisplay();
     if(timer<=0) endGame();
   },1000);
@@ -198,9 +193,9 @@ function updateTimerDisplay(){
 // Oyun bitişi
 function endGame(){
   clearInterval(interval);
-  const highscore = Math.max(score, Number(localStorage.getItem('highscore')||0));
-  localStorage.setItem('highscore', highscore);
-  highscoreEl.textContent = highscore;
+  const highscore=Math.max(score,Number(localStorage.getItem('highscore')||0));
+  localStorage.setItem('highscore',highscore);
+  highscoreEl.textContent=highscore;
   alert(`Oyun Bitti! Skor: ${score}`);
 }
 
@@ -219,9 +214,9 @@ function restart(){
 }
 
 // Başlat
-window.onload = ()=>{
+window.onload=()=>{
   const highscore = Number(localStorage.getItem('highscore')||0);
-  highscoreEl.textContent = highscore;
+  highscoreEl.textContent=highscore;
   restart();
 };
 restartBtn.addEventListener('click', restart);
