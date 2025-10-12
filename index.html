@@ -3,16 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Block Blast</title>
+<title>Block Blast Final</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>💥 Block Blast 💥</h1>
-<p>Skor: <span id="score">0</span></p>
+<div class="header">
+  <h1>💥 Block Blast 💥</h1>
+  <div class="scoreboard">
+    <span>Skor: <span id="score">0</span></span>
+    <span>En Yüksek Skor: <span id="highscore">0</span></span>
+    <span>Süre: <span id="timer">02:00</span></span>
+  </div>
+</div>
 
 <div id="board"></div>
 <div id="pieces"></div>
-
 <button id="restart">Restart</button>
 
 <script src="script.js"></script>
