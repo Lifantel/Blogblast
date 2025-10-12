@@ -93,3 +93,4 @@ button:hover {
   .piece { grid-template-columns: repeat(4, 15px); grid-template-rows: repeat(4, 15px); }
   .piece div { width: 15px; height: 15px; }
 }
+
